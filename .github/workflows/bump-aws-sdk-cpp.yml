@@ -1,0 +1,201 @@
+name: Auto bump AWS CRT packages
+
+on:
+  schedule:
+    # 毎週日曜日 12:00 JST = 03:00 UTC
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  MR_TARGET_BRANCH: update_aws-sdk-cpp
+  PKG_LIST: |
+    aws-c-auth
+    aws-c-cal
+    aws-c-common
+    aws-c-compression
+    aws-c-event-stream
+    aws-c-http
+    aws-c-io
+    aws-c-mqtt
+    aws-c-s3
+    aws-c-sdkutils
+    aws-checksums
+    aws-crt-cpp
+    aws-sdk-cpp
+    s2n
+
+jobs:
+  bump_crt:
+    runs-on: ubuntu-latest
+    container:
+      image: gentoo/stage3:nomultilib
+
+    steps:
+      - name: Checkout (this repo)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          emerge-webrsync
+          emerge -q dev-util/pkgdev dev-vcs/git net-misc/curl
+
+          git config --global user.name  "${GIT_AUTHOR_NAME:-github-actions[bot]}"
+          git config --global user.email "${GIT_AUTHOR_EMAIL:-github-actions[bot]@users.noreply.github.com}"
+
+      - name: Bump ebuilds and create PR (in this repo only)
+        shell: bash
+        env:
+          PUSH_TOKEN: ${{ secrets.PUSH_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${PUSH_TOKEN:-}" ]]; then
+            echo "ERROR: secrets.PUSH_TOKEN が未設定です"
+            exit 1
+          fi
+
+          echo "repo=${GITHUB_REPOSITORY}"
+
+          # ベースブランチを取る
+          git fetch origin "${MR_TARGET_BRANCH}:${MR_TARGET_BRANCH}" || true
+
+          mapfile -t pkgs <<<"${PKG_LIST}"
+
+          changelog=""
+          aws_diff=""
+
+          for p in "${pkgs[@]}"; do
+            # upstream URL
+            if [[ "$p" == "aws-sdk-cpp" || "$p" == "s2n" ]]; then
+              upstream="https://github.com/aws/${p}.git"
+            else
+              upstream="https://github.com/awslabs/${p}.git"
+            fi
+
+            # カテゴリ決定（aws-sdk-cpp だけ dev-cpp）
+            if [[ "$p" == "aws-sdk-cpp" ]]; then
+              dir="dev-cpp/${p}"
+            else
+              dir="dev-libs/${p}"
+            fi
+
+            latest=$(git ls-remote --tags --sort='v:refname' "$upstream" \
+              | awk '{print $2}' \
+              | sed 's@refs/tags/@@;s/^v//;s/\^{}//' \
+              | tail -n1)
+
+            current=$(
+              ls "${dir}" 2>/dev/null \
+                | sed -n "s/^${p}-//;s/\.ebuild$//p" \
+                | sort -V \
+                | tail -n1 || true
+            )
+
+            if [[ -n "$latest" && "$latest" != "$current" ]]; then
+              echo "🔄  ${p}: ${current:-none} → ${latest}"
+
+              if [[ -n "${current:-}" && -f "${dir}/${p}-${current}.ebuild" ]]; then
+                cp "${dir}/${p}-${current}.ebuild" "${dir}/${p}-${latest}.ebuild"
+              else
+                echo "ERROR: 既存 ebuild が見つからないためコピーできません: ${dir}/${p}-${current}.ebuild"
+                exit 1
+              fi
+
+              ebuild "${dir}/${p}-${latest}.ebuild" manifest
+              git add "${dir}/${p}-${latest}.ebuild" "${dir}/Manifest"
+
+              changelog+=$'\n'"* ${p}: ${current:-new} → ${latest}"
+
+              # aws-sdk-cpp だけ generated/src の差分を抽出
+              if [[ "$p" == "aws-sdk-cpp" && -n "${current:-}" ]]; then
+                tmp="$(mktemp -d)"
+                git clone --quiet "$upstream" "$tmp"
+
+                mapfile -t diff_dirs < <(
+                  comm -13 \
+                    <(git -C "$tmp" ls-tree -r --name-only "${current}" -- generated/src/ \
+                        | awk -F/ 'NF>=3{print $1"/"$2"/"$3}' | sort -u) \
+                    <(git -C "$tmp" ls-tree -r --name-only "${latest}"  -- generated/src/ \
+                        | awk -F/ 'NF>=3{print $1"/"$2"/"$3}' | sort -u)
+                )
+
+                if (( ${#diff_dirs[@]} )); then
+                  aws_diff+=$'\n\n'"### generated/src 変更 (${current} → ${latest})"
+                  for d in "${diff_dirs[@]}"; do
+                    aws_diff+=$'\n'"- ${d}"
+                  done
+                fi
+
+                rm -rf "$tmp"
+              fi
+            else
+              echo "✅  ${p} は最新 (${current:-none})"
+            fi
+          done
+
+          if [[ -z "${changelog}" ]]; then
+            echo "💤  変更なし"
+            exit 0
+          fi
+
+          branch="auto/bump-$(date +%Y%m%d)"
+
+          # ベースは MR_TARGET_BRANCH
+          git switch -c "${branch}" "origin/${MR_TARGET_BRANCH}" || git switch "${branch}"
+
+          git commit -m "auto: bump AWS CRT packages" -m "${changelog}"
+
+          # push も「このリポジトリ」固定
+          git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:refs/heads/${branch}"
+
+          pr_body="${changelog}${aws_diff}"
+
+          # 既存 PR があれば作らない
+          existing=$(
+            curl -fsSL \
+              -H "Authorization: token ${PUSH_TOKEN}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${branch}" \
+              | python3 -c 'import sys,json; d=json.load(sys.stdin); print(len(d))'
+          )
+
+          if [[ "$existing" != "0" ]]; then
+            echo "PR already exists for ${branch}"
+            exit 0
+          fi
+
+          # PR 作成（base/head は自リポジトリ内のブランチ）
+          python3 - <<'PY' > pr.json
+          import json, os
+          title = "Auto bump AWS CRT packages"
+          body = os.environ["pr_body"]
+          head = os.environ["branch"]
+          base = os.environ["MR_TARGET_BRANCH"]
+          print(json.dumps({
+            "title": title,
+            "head": head,
+            "base": base,
+            "body": body
+          }, ensure_ascii=False))
+          PY
+
+          curl -fsSL \
+            -H "Authorization: token ${PUSH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -d @pr.json \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls" \
+            >/dev/null
+
+          echo "✅ PR created: ${branch}"
+        env:
+          branch: ""
+          pr_body: ""
