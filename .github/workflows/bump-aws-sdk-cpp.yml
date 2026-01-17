@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 env:
-  MR_TARGET_BRANCH: add_aws-sdk-cpp
+  MR_TARGET_BRANCH: update_aws-sdk-cpp
   PKG_LIST: |
     aws-c-auth
     aws-c-cal
