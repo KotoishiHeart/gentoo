@@ -11,7 +11,7 @@ permissions:
   pull-requests: write
 
 env:
-  MR_TARGET_BRANCH: update_aws-sdk-cpp
+  MR_TARGET_BRANCH: add_aws-sdk-cpp
   PKG_LIST: |
     aws-c-auth
     aws-c-cal
@@ -62,9 +62,6 @@ jobs:
             exit 1
           fi
 
-          echo "repo=${GITHUB_REPOSITORY}"
-
-          # ベースブランチを取る
           git fetch origin "${MR_TARGET_BRANCH}:${MR_TARGET_BRANCH}" || true
 
           mapfile -t pkgs <<<"${PKG_LIST}"
@@ -73,14 +70,12 @@ jobs:
           aws_diff=""
 
           for p in "${pkgs[@]}"; do
-            # upstream URL
             if [[ "$p" == "aws-sdk-cpp" || "$p" == "s2n" ]]; then
               upstream="https://github.com/aws/${p}.git"
             else
               upstream="https://github.com/awslabs/${p}.git"
             fi
 
-            # カテゴリ決定（aws-sdk-cpp だけ dev-cpp）
             if [[ "$p" == "aws-sdk-cpp" ]]; then
               dir="dev-cpp/${p}"
             else
@@ -102,20 +97,13 @@ jobs:
             if [[ -n "$latest" && "$latest" != "$current" ]]; then
               echo "🔄  ${p}: ${current:-none} → ${latest}"
 
-              if [[ -n "${current:-}" && -f "${dir}/${p}-${current}.ebuild" ]]; then
-                cp "${dir}/${p}-${current}.ebuild" "${dir}/${p}-${latest}.ebuild"
-              else
-                echo "ERROR: 既存 ebuild が見つからないためコピーできません: ${dir}/${p}-${current}.ebuild"
-                exit 1
-              fi
-
+              cp "${dir}/${p}-${current}.ebuild" "${dir}/${p}-${latest}.ebuild"
               ebuild "${dir}/${p}-${latest}.ebuild" manifest
-              git add "${dir}/${p}-${latest}.ebuild" "${dir}/Manifest"
 
+              git add "${dir}/${p}-${latest}.ebuild" "${dir}/Manifest"
               changelog+=$'\n'"* ${p}: ${current:-new} → ${latest}"
 
-              # aws-sdk-cpp だけ generated/src の差分を抽出
-              if [[ "$p" == "aws-sdk-cpp" && -n "${current:-}" ]]; then
+              if [[ "$p" == "aws-sdk-cpp" && -n "$current" ]]; then
                 tmp="$(mktemp -d)"
                 git clone --quiet "$upstream" "$tmp"
 
@@ -148,43 +136,36 @@ jobs:
 
           branch="auto/bump-$(date +%Y%m%d)"
 
-          # ベースは MR_TARGET_BRANCH
           git switch -c "${branch}" "origin/${MR_TARGET_BRANCH}" || git switch "${branch}"
-
           git commit -m "auto: bump AWS CRT packages" -m "${changelog}"
 
-          # push も「このリポジトリ」固定
           git remote set-url origin "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "HEAD:refs/heads/${branch}"
 
           pr_body="${changelog}${aws_diff}"
 
-          # 既存 PR があれば作らない
           existing=$(
             curl -fsSL \
               -H "Authorization: token ${PUSH_TOKEN}" \
               -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${branch}" \
-              | python3 -c 'import sys,json; d=json.load(sys.stdin); print(len(d))'
+              | python3 -c 'import sys,json; print(len(json.load(sys.stdin)))'
           )
 
           if [[ "$existing" != "0" ]]; then
-            echo "PR already exists for ${branch}"
+            echo "PR already exists"
             exit 0
           fi
 
-          # PR 作成（base/head は自リポジトリ内のブランチ）
+          export branch pr_body
+
           python3 - <<'PY' > pr.json
           import json, os
-          title = "Auto bump AWS CRT packages"
-          body = os.environ["pr_body"]
-          head = os.environ["branch"]
-          base = os.environ["MR_TARGET_BRANCH"]
           print(json.dumps({
-            "title": title,
-            "head": head,
-            "base": base,
-            "body": body
+            "title": "Auto bump AWS CRT packages",
+            "head": os.environ["branch"],
+            "base": os.environ["MR_TARGET_BRANCH"],
+            "body": os.environ["pr_body"],
           }, ensure_ascii=False))
           PY
 
@@ -192,10 +173,6 @@ jobs:
             -H "Authorization: token ${PUSH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
             -d @pr.json \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls" \
-            >/dev/null
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/pulls"
 
           echo "✅ PR created: ${branch}"
-        env:
-          branch: ""
-          pr_body: ""
