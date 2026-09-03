@@ -9,7 +9,7 @@ DISTUTILS_EXT=1
 
 inherit distutils-r1
 
-DESCRIPTION="Secure backup system using gnupg to encrypt data"
+DESCRIPTION="Secure backup system using GnuPG to encrypt data"
 HOMEPAGE="https://duplicity.gitlab.io/"
 
 if [[ ${PV} == 9999 ]] ; then
@@ -19,7 +19,7 @@ else
 	SRC_URI="https://gitlab.com/duplicity/duplicity/-/archive/rel.${PV}/${PN}-rel.${PV}.tar.bz2"
 	S="${WORKDIR}"/${PN}-rel.${PV}
 
-	KEYWORDS="amd64 ~arm64 ~x86 ~x64-macos"
+	KEYWORDS="amd64 arm64 x86 ~x64-macos"
 fi
 
 LICENSE="GPL-3"
@@ -47,16 +47,8 @@ RDEPEND="
 "
 
 EPYTEST_DESELECT=(
-	# Linting tests (black, pylint, etc); not relevant for us
-	testing/test_code.py::CodeTest::test_black
-	testing/test_code.py::CodeTest::test_pep8
-	testing/test_code.py::CodeTest::test_pylint
 	# boto3
 	testing/unit/test_cli_main.py::CommandlineTest::test_intermixed_args
-)
-
-EPYTEST_IGNORE=(
-	testing/test_code.py
 )
 
 PATCHES=(
@@ -65,6 +57,13 @@ PATCHES=(
 )
 
 distutils_enable_tests pytest
+
+python_prepare_all() {
+	# Linting tests (black, pylint, etc); not relevant for us
+	rm testing/test_code.py || die
+
+	distutils-r1_python_prepare_all
+}
 
 python_test() {
 	# The default portage tempdir is too long for AF_UNIX sockets

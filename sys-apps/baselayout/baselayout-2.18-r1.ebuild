@@ -16,7 +16,7 @@ if [[ ${PV} = 9999 ]]; then
 	inherit git-r3
 else
 	SRC_URI="https://gitweb.gentoo.org/proj/${PN}.git/snapshot/${P}.tar.bz2"
-	KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86 ~arm64-macos ~x64-macos ~x64-solaris"
+	KEYWORDS="~alpha amd64 arm arm64 ~hppa ~loong ~m68k ~mips ppc ppc64 ~riscv ~s390 ~sparc x86 ~arm64-macos ~x64-macos ~x64-solaris"
 fi
 
 LICENSE="GPL-2"
@@ -271,6 +271,8 @@ src_install() {
 	${BRANDING_OS_BUG_REPORT_URL:+BUG_REPORT_URL=${BRANDING_OS_BUG_REPORT_URL@Q}}
 	ANSI_COLOR='1;32'
 	EOF
+
+	dosym -r /usr/lib/os-release /etc/os-release
 
 	if [[ ${CHOST} == *-darwin* ]] ; then
 		# add SDK path which contains development manpages

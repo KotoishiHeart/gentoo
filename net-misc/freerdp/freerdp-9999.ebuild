@@ -1,4 +1,4 @@
-# Copyright 2011-2025 Gentoo Authors
+# Copyright 2011-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -27,7 +27,7 @@ HOMEPAGE="https://www.freerdp.com/"
 
 LICENSE="Apache-2.0"
 SLOT="3"
-IUSE="aad alsa cpu_flags_arm_neon +client cups debug +ffmpeg +fuse gstreamer +icu jpeg kerberos openh264 pulseaudio sdl server smartcard systemd test usb valgrind wayland X xinerama xv"
+IUSE="aad alsa camera cpu_flags_arm_neon +client cups debug +ffmpeg +fuse gstreamer +icu jpeg kerberos openh264 pulseaudio sdl server smartcard systemd test usb valgrind wayland winpr-tools X xinerama xv"
 RESTRICT="!test? ( test )"
 
 BDEPEND+="
@@ -84,6 +84,7 @@ COMMON_DEPEND="
 	smartcard? ( sys-apps/pcsc-lite )
 	systemd? ( sys-apps/systemd:0= )
 	client? (
+		camera? ( media-libs/libv4l )
 		sdl? (
 			media-libs/libsdl3
 			media-libs/sdl3-ttf
@@ -99,6 +100,9 @@ COMMON_DEPEND="
 	)
 "
 DEPEND="${COMMON_DEPEND}
+	test? (
+		ffmpeg? ( media-video/ffmpeg:0[x264(-)] )
+	)
 	valgrind? ( dev-debug/valgrind )
 "
 RDEPEND="${COMMON_DEPEND}
@@ -120,35 +124,24 @@ option_client() {
 	fi
 }
 
-run_for_testing() {
-	if use test; then
-		local BUILD_DIR="${WORKDIR}/${P}_testing"
-		"$@"
-	fi
-}
-
 src_configure() {
 	use debug || append-cppflags -DNDEBUG
-	freerdp_configure -DBUILD_TESTING=OFF
-	run_for_testing freerdp_configure -DBUILD_TESTING=ON
-}
-
-freerdp_configure() {
 	local mycmakeargs=(
 		-Wno-dev
+
+		-DBUILD_TESTING=$(option test)
 
 		# https://bugs.gentoo.org/927037
 		-DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
 		-DCHANNEL_URBDRC=$(option usb)
+		-DCHANNEL_RDPECAM_CLIENT=$(option_client camera)
 		-DWITH_AAD=$(option aad)
 		-DWITH_ALSA=$(option alsa)
 		-DWITH_CCACHE=OFF
-
 		-DWITH_CLIENT=$(option client)
 		-DWITH_CLIENT_SDL2=OFF
 		-DWITH_CLIENT_SDL3=$(option_client sdl)
-
 		-DWITH_SAMPLE=OFF
 		-DWITH_CUPS=$(option cups)
 		-DWITH_DEBUG_ALL=$(option debug)
@@ -178,16 +171,9 @@ freerdp_configure() {
 		-DWITH_XV=$(option xv)
 		-DWITH_WAYLAND=$(option_client wayland)
 		-DWITH_WEBVIEW=OFF
-		-DWITH_WINPR_TOOLS=$(option server)
-
-		"$@"
+		-DWITH_WINPR_TOOLS=$(option winpr-tools)
 	)
 	cmake_src_configure
-}
-
-src_compile() {
-	cmake_src_compile
-	run_for_testing cmake_src_compile
 }
 
 src_test() {
@@ -197,7 +183,7 @@ src_test() {
 	if has network-sandbox ${FEATURES}; then
 		CMAKE_SKIP_TESTS+=( TestConnect )
 	fi
-	run_for_testing cmake_src_test
+	cmake_src_test
 }
 
 src_install() {

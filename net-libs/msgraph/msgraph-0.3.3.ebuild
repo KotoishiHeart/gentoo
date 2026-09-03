@@ -5,7 +5,7 @@ EAPI=8
 
 inherit gnome.org meson
 
-DESCRIPTION="GLib-based library for accessing online serive APIs using MS Graph protocol."
+DESCRIPTION="GLib-based library for accessing online serive APIs using MS Graph protocol"
 HOMEPAGE="https://gitlab.gnome.org/GNOME/msgraph"
 
 LICENSE="LGPL-2+"
@@ -30,7 +30,6 @@ DEPEND="${RDEPEND}
 	>=dev-util/gdbus-codegen-2.80.5-r1
 	>=sys-devel/gettext-0.19.8
 	virtual/pkgconfig
-	dev-libs/gobject-introspection-common
 "
 BDEPEND="
 	gtk-doc? ( dev-util/gi-docgen )

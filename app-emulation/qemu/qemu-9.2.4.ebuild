@@ -46,7 +46,7 @@ else
 	fi
 
 	S="${WORKDIR}/${MY_P}"
-	[[ "${PV}" != *_rc* ]] && KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
+	[[ "${PV}" != *_rc* ]] && KEYWORDS="amd64 ~arm arm64 ~loong ~ppc ppc64 ~riscv x86"
 fi
 
 DESCRIPTION="QEMU + Kernel-based Virtual Machine userland tools"
@@ -227,7 +227,7 @@ SOFTMMU_TOOLS_DEPEND="
 		>=app-emulation/spice-protocol-0.14.0
 		>=app-emulation/spice-0.14.0[static-libs(+)]
 	)
-	ssh? ( >=net-libs/libssh-0.8.6[static-libs(+)] )
+	ssh? ( >=net-libs/libssh-0.8.6[sftp,static-libs(+)] )
 	udev? ( virtual/libudev:= )
 	usb? ( >=virtual/libusb-1-r2:1[static-libs(+)] )
 	usbredir? ( >=sys-apps/usbredir-0.6[static-libs(+)] )
@@ -244,7 +244,7 @@ SEABIOS_VERSION="1.16.3"
 
 X86_FIRMWARE_DEPEND="
 	pin-upstream-blobs? (
-		~sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}
+		~sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}[qemu_softmmu_targets_x86_64(+)]
 		~sys-firmware/ipxe-1.21.1[binary,qemu]
 		~sys-firmware/seabios-bin-${SEABIOS_VERSION}
 		~sys-firmware/sgabios-0.1_pre10[binary]
@@ -252,7 +252,7 @@ X86_FIRMWARE_DEPEND="
 	!pin-upstream-blobs? (
 		|| (
 			>=sys-firmware/edk2-${EDK2_OVMF_VERSION}
-			>=sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}
+			>=sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}[qemu_softmmu_targets_x86_64(+)]
 		)
 		sys-firmware/ipxe[qemu]
 		|| (

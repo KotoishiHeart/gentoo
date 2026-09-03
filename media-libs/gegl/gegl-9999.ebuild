@@ -3,7 +3,7 @@
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{11..14} )
+PYTHON_COMPAT=( python3_{12..15} )
 # vala and introspection support is broken, bug #468208
 VALA_USE_DEPEND=vapigen
 
@@ -109,6 +109,8 @@ src_prepare() {
 src_configure() {
 	# Bug #859901
 	filter-lto
+
+	tc-export READELF NM
 
 	use vala && vala_setup
 

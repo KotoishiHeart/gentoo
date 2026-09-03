@@ -1,4 +1,4 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -19,7 +19,7 @@ HOMEPAGE="https://github.com/martinpitt/umockdev/"
 
 LICENSE="LGPL-2.1+"
 SLOT="0"
-IUSE="test"
+IUSE="selinux test"
 RESTRICT="!test? ( test )"
 
 RDEPEND="
@@ -27,6 +27,7 @@ RDEPEND="
 	virtual/libudev:=[${MULTILIB_USEDEP}]
 	>=dev-libs/glib-2.32:2[${MULTILIB_USEDEP}]
 	>=dev-libs/gobject-introspection-1.82.0-r2:=
+	selinux? ( sys-libs/libselinux )
 "
 DEPEND="${RDEPEND}
 	test? (
@@ -39,6 +40,10 @@ BDEPEND="
 	app-arch/xz-utils
 	virtual/pkgconfig
 "
+
+PATCHES=(
+	"${FILESDIR}"/${PN}-0.19.7-selinux-automagic.patch
+)
 
 pkg_setup() {
 	use test && python-any-r1_pkg_setup
@@ -53,11 +58,14 @@ multilib_src_configure() {
 	# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=101270
 	filter-flags -fno-semantic-interposition
 
-	export VALAC="$(type -P valac-$(vala_best_api_version))"
+	local emesonargs=(
+		$(meson_feature selinux)
+	)
+
 	meson_src_configure
 }
 
 multilib_src_test() {
 	export SLOW_TESTBED_FACTOR=100
-	meson_src_test --num-processes=1 --timeout-multiplier=10 --setup installed
+	meson_src_test --num-processes=1 --timeout-multiplier=10
 }

@@ -57,7 +57,7 @@ LLVM_VERSION=$(ver_cut 1-3)
 # @DESCRIPTION:
 # The major version of current LLVM trunk.  Used to determine
 # the correct branch to use.
-_LLVM_MAIN_MAJOR=23
+_LLVM_MAIN_MAJOR=24
 
 # @ECLASS_VARIABLE: _LLVM_SOURCE_TYPE
 # @INTERNAL
@@ -72,14 +72,11 @@ if [[ -z ${_LLVM_SOURCE_TYPE+1} ]]; then
 			_LLVM_SOURCE_TYPE=snapshot
 
 			case ${PV} in
-				22.0.0_pre20260113)
-					EGIT_COMMIT=85c3c83ae54c9e81924f1ca048cfddc8d36bbb02
+				24.0.0_pre20260725)
+					EGIT_COMMIT=0bf3638ddfe6e8bb3b79ebe8c2a918384a5df612
 					;;
-				22.0.0_pre20260106)
-					EGIT_COMMIT=b01c3d6682d2fa5d6ac22d5a964b739009e9db7b
-					;;
-				22.0.0_pre20260103)
-					EGIT_COMMIT=05349a9b43805d3c0b424da99f3a1fa362cd3419
+				23.1.0_pre20260724)
+					EGIT_COMMIT=bb9934d4dfef9033ded36d26827dbb6d3ac1dd92
 					;;
 				*)
 					die "Unknown snapshot: ${PV}"
@@ -175,43 +172,25 @@ fi
 # version.  The value depends on ${PV}.
 
 case ${LLVM_MAJOR} in
-	14)
-		ALL_LLVM_EXPERIMENTAL_TARGETS=( ARC CSKY M68k )
-		ALL_LLVM_PRODUCTION_TARGETS=(
-			AArch64 AMDGPU ARM AVR BPF Hexagon Lanai Mips MSP430 NVPTX
-			PowerPC RISCV Sparc SystemZ VE WebAssembly X86 XCore
-		)
-		;;
-	15)
+	1*)
 		ALL_LLVM_EXPERIMENTAL_TARGETS=(
-			ARC CSKY DirectX LoongArch M68k SPIRV
+			ARC CSKY DirectX M68k SPIRV Xtensa
 		)
 		ALL_LLVM_PRODUCTION_TARGETS=(
-			AArch64 AMDGPU ARM AVR BPF Hexagon Lanai Mips MSP430 NVPTX
-			PowerPC RISCV Sparc SystemZ VE WebAssembly X86 XCore
+			AArch64 AMDGPU ARM AVR BPF Hexagon Lanai LoongArch Mips
+			MSP430 NVPTX PowerPC RISCV Sparc SystemZ VE WebAssembly X86
+			XCore
 		)
 		;;
 	*)
-		# TODO: limit to < 20 when we remove old snapshots
-		if ver_test ${PV} -lt 20.0.0_pre20250122; then
-			ALL_LLVM_EXPERIMENTAL_TARGETS=(
-				ARC CSKY DirectX M68k SPIRV Xtensa
-			)
-			ALL_LLVM_PRODUCTION_TARGETS=(
-				AArch64 AMDGPU ARM AVR BPF Hexagon Lanai LoongArch Mips
-				MSP430 NVPTX PowerPC RISCV Sparc SystemZ VE WebAssembly X86
-				XCore
-			)
-		else
-			ALL_LLVM_EXPERIMENTAL_TARGETS=(
-				ARC CSKY DirectX M68k Xtensa
-			)
-			ALL_LLVM_PRODUCTION_TARGETS=(
-				AArch64 AMDGPU ARM AVR BPF Hexagon Lanai LoongArch Mips
-				MSP430 NVPTX PowerPC RISCV Sparc SPIRV SystemZ VE
-				WebAssembly X86 XCore
-			)
-		fi
+		ALL_LLVM_EXPERIMENTAL_TARGETS=(
+			ARC CSKY DirectX M68k Xtensa
+		)
+		ALL_LLVM_PRODUCTION_TARGETS=(
+			AArch64 AMDGPU ARM AVR BPF Hexagon Lanai LoongArch Mips
+			MSP430 NVPTX PowerPC RISCV Sparc SPIRV SystemZ VE
+			WebAssembly X86 XCore
+		)
 		;;
 esac
 
@@ -304,26 +283,20 @@ llvm.org_set_globals() {
 		LLVM_MANPAGE_DIST=
 		if [[ ${_LLVM_SOURCE_TYPE} == tar && ${PV} != *_rc* ]]; then
 			case ${PV} in
-				14*|15*|16.0.[0-3])
-					LLVM_MANPAGE_DIST="llvm-${PV}-manpages.tar.bz2"
-					;;
 				16*)
 					LLVM_MANPAGE_DIST="llvm-16.0.4-manpages.tar.bz2"
 					;;
 				17*)
 					LLVM_MANPAGE_DIST="llvm-17.0.1-manpages.tar.bz2"
 					;;
-				18*)
-					LLVM_MANPAGE_DIST="llvm-18.1.0-manpages.tar.bz2"
+				1[89]*)
+					LLVM_MANPAGE_DIST="llvm-${LLVM_MAJOR}.1.0-manpages.tar.bz2"
 					;;
-				19*)
-					LLVM_MANPAGE_DIST="llvm-19.1.0-manpages.tar.bz2"
+				2[0-1]*)
+					LLVM_MANPAGE_DIST="llvm-${LLVM_MAJOR}.1.0-manpages.tar.xz"
 					;;
-				20*)
-					LLVM_MANPAGE_DIST="llvm-20.1.0-manpages.tar.xz"
-					;;
-				21*)
-					LLVM_MANPAGE_DIST="llvm-21.1.0-manpages.tar.xz"
+				22*)
+					LLVM_MANPAGE_DIST="llvm-${LLVM_MAJOR}.1.0-r2-manpages.tar.xz"
 					;;
 			esac
 		fi
@@ -332,7 +305,7 @@ llvm.org_set_globals() {
 		if [[ -n ${LLVM_MANPAGE_DIST} ]]; then
 			SRC_URI+="
 				!doc? (
-					https://dev.gentoo.org/~mgorny/dist/llvm/${LLVM_MANPAGE_DIST}
+					https://distfiles.gentoo.org/pub/proj/llvm/manpages/${LLVM_MANPAGE_DIST}
 				)
 			"
 		fi
@@ -340,7 +313,8 @@ llvm.org_set_globals() {
 
 	if [[ -n ${LLVM_PATCHSET} ]]; then
 		SRC_URI+="
-			https://dev.gentoo.org/~mgorny/dist/llvm/llvm-gentoo-patchset-${LLVM_PATCHSET}.tar.xz"
+			https://distfiles.gentoo.org/pub/proj/llvm/patchsets/${LLVM_MAJOR}/llvm-gentoo-patchset-${LLVM_PATCHSET}.tar.xz
+		"
 	fi
 
 	local x

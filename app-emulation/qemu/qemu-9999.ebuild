@@ -36,8 +36,12 @@ if [[ ${PV} == *9999* ]]; then
 		SRC_URI+=" https://gitlab.com/qemu-project/${proj}/-/archive/${c}/${proj}-${c}.tar.bz2"
 	done
 else
+	inherit verify-sig
 	MY_P="${PN}-${PV/_rc/-rc}"
-	SRC_URI="https://download.qemu.org/${MY_P}.tar.xz"
+	SRC_URI="
+		https://download.qemu.org/${MY_P}.tar.xz
+		verify-sig? ( https://download.qemu.org/${MY_P}.tar.xz.sig )
+	"
 
 	if [[ ${QEMU_DOCS_PREBUILT} == 1 ]] ; then
 		SRC_URI+=" !doc? ( https://dev.gentoo.org/~${QEMU_DOCS_PREBUILT_DEV}/distfiles/${CATEGORY}/${PN}/${PN}-${QEMU_DOCS_VERSION}-docs.tar.xz )"
@@ -46,11 +50,6 @@ else
 	S="${WORKDIR}/${MY_P}"
 	[[ "${PV}" != *_rc* ]] && KEYWORDS="~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
 fi
-
-# this is still required to support glibc-2.42 in qemu-user, bug 961307
-# source: https://gitlab.com/qemu-project/qemu/-/issues/3065#note_2969046870
-#
-SRC_URI+=" https://dev.gentoo.org/~dilfridge/distfiles/qemu-10-termios2-patches.tar.xz"
 
 DESCRIPTION="QEMU + Kernel-based Virtual Machine userland tools"
 HOMEPAGE="https://www.qemu.org https://www.linux-kvm.org"
@@ -61,8 +60,8 @@ SLOT="0"
 [[ ${QEMU_DOCS_PREBUILT} == 1 ]] && QEMU_DOC_USEFLAG="doc"
 
 IUSE="accessibility +aio alsa bpf bzip2 capstone +curl debug ${QEMU_DOC_USEFLAG}
-	+fdt fuse glusterfs +gnutls gtk infiniband iscsi io-uring
-	jack jemalloc +jpeg keyutils
+	+fdt fuse +gnutls gtk infiniband iscsi io-uring
+	jack +jpeg keyutils
 	lzo multipath
 	ncurses nfs nls numa opengl +oss pam passt +pin-upstream-blobs pipewire
 	plugins +png pulseaudio python rbd sasl +seccomp sdl sdl-image selinux
@@ -80,7 +79,6 @@ COMMON_TARGETS="
 	loongarch64
 	m68k
 	microblaze
-	microblazeel
 	mips
 	mips64
 	mips64el
@@ -110,6 +108,7 @@ IUSE_USER_TARGETS="
 	aarch64_be
 	armeb
 	hexagon
+	microblazeel
 	mipsn32
 	mipsn32el
 	ppc64le
@@ -180,7 +179,6 @@ SOFTMMU_TOOLS_DEPEND="
 	curl? ( >=net-misc/curl-7.15.4[static-libs(+)] )
 	fdt? ( >=sys-apps/dtc-1.5.1[static-libs(+)] )
 	fuse? ( >=sys-fs/fuse-3.1:3=[static-libs(+)] )
-	glusterfs? ( >=sys-cluster/glusterfs-3.4.0[static-libs(+)] )
 	gnutls? (
 		>=net-libs/gnutls-3.7.5:=[static-libs(+)]
 		>=dev-libs/nettle-3.7.3:=[static-libs(+)]
@@ -193,7 +191,6 @@ SOFTMMU_TOOLS_DEPEND="
 	iscsi? ( net-libs/libiscsi )
 	io-uring? ( sys-libs/liburing:=[static-libs(+)] )
 	jack? ( virtual/jack )
-	jemalloc? ( dev-libs/jemalloc )
 	jpeg? ( media-libs/libjpeg-turbo:=[static-libs(+)] )
 	kernel_linux? ( sys-libs/libcap-ng[static-libs(+)] )
 	keyutils? ( sys-apps/keyutils[static-libs(+)] )
@@ -228,7 +225,7 @@ SOFTMMU_TOOLS_DEPEND="
 	smartcard? ( >=app-emulation/libcacard-2.5.0[static-libs(+)] )
 	snappy? ( app-arch/snappy:= )
 	spice? (
-		>=app-emulation/spice-protocol-0.14.0
+		>=app-emulation/spice-protocol-0.14.5
 		>=app-emulation/spice-0.14.0[static-libs(+)]
 	)
 	ssh? ( >=net-libs/libssh-0.8.6[static-libs(+)] )
@@ -264,7 +261,7 @@ SEABIOS_VERSION="1.16.3"
 
 X86_FIRMWARE_DEPEND="
 	pin-upstream-blobs? (
-		~sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}
+		~sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}[qemu_softmmu_targets_x86_64(+)]
 		~sys-firmware/ipxe-1.21.1_p20230601[binary,qemu]
 		~sys-firmware/seabios-bin-${SEABIOS_VERSION}
 		~sys-firmware/sgabios-0.1_pre10[binary]
@@ -272,7 +269,7 @@ X86_FIRMWARE_DEPEND="
 	!pin-upstream-blobs? (
 		|| (
 			>=sys-firmware/edk2-${EDK2_OVMF_VERSION}
-			>=sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}
+			>=sys-firmware/edk2-bin-${EDK2_OVMF_VERSION}[qemu_softmmu_targets_x86_64(+)]
 		)
 		sys-firmware/ipxe[qemu]
 		|| (
@@ -314,6 +311,11 @@ BDEPEND="
 		dev-python/pycotap[${PYTHON_USEDEP}]
 	)
 "
+if [[ ${PV} != 9999 ]]; then
+	# https://www.qemu.org/download/
+	BDEPEND+=" verify-sig? ( sec-keys/openpgp-keys-mdroth )"
+	VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/mdroth.asc
+fi
 CDEPEND="
 	${ALL_DEPEND//\[static-libs(+)]}
 	${SOFTMMU_TOOLS_DEPEND//\[static-libs(+)]}
@@ -343,7 +345,7 @@ PATCHES=(
 	"${FILESDIR}"/${PN}-9.2.0-capstone-include-path.patch
 	"${FILESDIR}"/${PN}-8.1.0-skip-tests.patch
 	"${FILESDIR}"/${PN}-8.1.0-find-sphinx.patch
-	"${FILESDIR}"/${PN}-7.2.16-optionrom-pass-Wl-no-error-rwx-segments.patch
+	"${FILESDIR}"/${PN}-10.2.2-optionrom-pass-Wl-no-error-rwx-segments.patch
 )
 
 QA_PREBUILT="
@@ -487,6 +489,7 @@ src_unpack() {
 		cd "${S}" || die
 		meson subprojects packagefiles --apply || die
 	else
+		use verify-sig && verify-sig_verify_detached "${DISTDIR}"/${MY_P}.tar.xz{,.sig}
 		default
 	fi
 }
@@ -496,9 +499,6 @@ src_prepare() {
 	check_targets IUSE_USER_TARGETS linux-user
 
 	default
-
-	# this is still required to support glibc-2.42 in qemu-user
-	eapply "${WORKDIR}/termios2-patches"/*.patch
 
 	# Use correct toolchain to fix cross-compiling
 	tc-export AR AS LD NM OBJCOPY PKG_CONFIG RANLIB STRINGS
@@ -627,14 +627,12 @@ qemu_src_configure() {
 		$(conf_tools doc docs)
 		$(conf_notuser fdt)
 		$(conf_notuser fuse)
-		$(conf_notuser glusterfs)
 		$(conf_notuser gnutls)
 		$(conf_notuser gnutls nettle)
 		$(conf_notuser gtk)
 		$(conf_notuser infiniband rdma)
 		$(conf_notuser iscsi libiscsi)
 		$(conf_notuser io-uring linux-io-uring)
-		$(conf_malloc jemalloc)
 		$(conf_notuser jpeg vnc-jpeg)
 		$(conf_notuser kernel_linux kvm)
 		$(conf_notuser keyutils libkeyutils)

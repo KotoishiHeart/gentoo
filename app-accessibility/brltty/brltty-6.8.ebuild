@@ -4,8 +4,6 @@
 EAPI=8
 
 FINDLIB_USE="ocaml"
-JAVA_PKG_WANT_SOURCE="1.8"
-JAVA_PKG_WANT_TARGET="1.8"
 LUA_COMPAT=( lua5-4 )
 PYTHON_COMPAT=( python3_{11..14} )
 
@@ -17,7 +15,7 @@ SRC_URI="https://brltty.app/archive/${P}.tar.xz"
 
 LICENSE="LGPL-2.1+"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~loong ~ppc ~ppc64 ~riscv ~x86"
+KEYWORDS="~alpha amd64 ~arm arm64 ~loong ~ppc ppc64 ~riscv ~sparc x86"
 BINDINGS="emacs java lua ocaml python tcl"
 IUSE="+api +beeper bluetooth caps +fm gpm +hid iconv icu louis +midi
 ncurses nls +pcm policykit +pcre usb systemd +speech xml X ${BINDINGS}"

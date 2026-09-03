@@ -1,11 +1,11 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
 CMAKE_MAKEFILE_GENERATOR="ninja"
 
-PYTHON_COMPAT=( python3_{12..13} )
+PYTHON_COMPAT=( python3_{12..14} )
 
 DISTUTILS_OPTIONAL=1
 DISTUTILS_USE_PEP517=no
@@ -46,8 +46,10 @@ CDEPEND="
 	cuda? ( >=dev-util/nvidia-cuda-toolkit-11:=[profiler] )
 	opencl? ( virtual/opencl )
 	openmp? (
-		sys-devel/gcc[openmp]
-		llvm-runtimes/clang-runtime[openmp]
+		|| (
+			sys-devel/gcc[openmp]
+			llvm-runtimes/clang-runtime[openmp]
+		)
 	)
 	fftw? ( sci-libs/fftw:3.0= )
 	hwloc? ( sys-apps/hwloc:= )
@@ -92,7 +94,10 @@ DOCS=( AUTHORS README )
 
 RESTRICT="!test? ( test )"
 
-PATCHES=( "${FILESDIR}/${PN}-gcc-15.patch" )
+PATCHES=(
+	"${FILESDIR}/${PN}-gcc-15.patch"
+	"${FILESDIR}/${PN}-musl.patch"
+)
 
 if [[ ${PV} != *9999 ]]; then
 	S="${WORKDIR}/${PN}-${PV/_/-}"

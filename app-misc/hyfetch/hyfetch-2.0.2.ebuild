@@ -149,6 +149,7 @@ CRATES="
 	winsafe@0.0.19
 "
 
+RUST_MIN_VER="1.75.0"
 inherit cargo shell-completion optfeature
 
 DESCRIPTION="Neofetch with LGBTQ+ pride flags!"
@@ -165,7 +166,7 @@ KEYWORDS="amd64 ~arm64"
 
 src_install() {
 	dodir usr/bin
-	dobin target/release/hyfetch
+	dobin "$(cargo_target_dir)"/hyfetch
 	newbin neofetch neowofetch
 	doman docs/hyfetch.1
 	newman docs/neofetch.1 neowofetch.1

@@ -3,10 +3,10 @@
 
 EAPI=8
 
-PYTHON_COMPAT=( python3_{10..14} )
+PYTHON_COMPAT=( python3_{11..14} )
 inherit cmake flag-o-matic multilib python-any-r1 xdg
 
-DESCRIPTION="Mumble is an open source, low-latency, high quality voice chat software"
+DESCRIPTION="Open source, low-latency, high quality voice chat software"
 HOMEPAGE="https://wiki.mumble.info"
 if [[ "${PV}" == 9999 ]] ; then
 	inherit git-r3
@@ -48,8 +48,9 @@ RDEPEND="
 	>=dev-libs/openssl-1.0.0b:0=
 	dev-libs/poco:=[util,xml,zip]
 	>=dev-libs/protobuf-2.2.0:=
+	dev-libs/libfmt:=
 	dev-libs/spdlog:=
-	dev-qt/qtbase:6[dbus,gui,network,sqlite,widgets,xml]
+	dev-qt/qtbase:6[dbus,gui,network,sql,sqlite,ssl,widgets,xml]
 	dev-qt/qtsvg:6
 	>=media-libs/libsndfile-1.0.20[-minimal]
 	>=media-libs/opus-1.3.1
@@ -87,7 +88,6 @@ pkg_setup() {
 src_prepare() {
 	sed '/TRACY_ON_DEMAND/s@ ON @ OFF @' -i src/CMakeLists.txt || die
 
-	# required because of xdg.eclass also providing src_prepare
 	cmake_src_prepare
 }
 
@@ -98,8 +98,8 @@ src_configure() {
 		-Dbundled-cli11="OFF"
 		-Dbundled-json="OFF"
 		-Dbundled-rnnoise="OFF"
-		-Dbundled-spdlog="OFF"
 		-Dbundled-soci="OFF"
+		-Dbundled-spdlog="OFF"
 		-Dbundled-speex="OFF"
 		-Dbundled-utfcpp="OFF"
 		-Dg15="OFF"
@@ -150,8 +150,7 @@ src_install() {
 
 pkg_postinst() {
 	xdg_pkg_postinst
-	echo
+	elog
 	elog "Visit https://wiki.mumble.info/ for futher configuration instructions."
 	elog "Run 'mumble-overlay <program>' to start the OpenGL overlay (after starting mumble)."
-	echo
 }

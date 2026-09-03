@@ -342,7 +342,7 @@ cabal-bootstrap() {
 	elif [[ -f "${S}/Setup.hs" ]]; then
 		setupmodule="${S}/Setup.hs"
 	else
-		ewarn "No Setup.lhs or Setup.hs found"
+		einfo "No Setup.lhs or Setup.hs found"
 		cabal-mksetup
 		setupmodule="${S}/Setup.hs"
 	fi
@@ -861,7 +861,7 @@ cabal_src_install() {
 	# if it does not exist (dummy libraries and binaries w/o libraries)
 	local ghc_confdir_with_prefix="$(ghc-confdir)"
 	# remove EPREFIX
-	dodir "${ghc_confdir_with_prefix#${EPREFIX}}"
+	dodir "${ghc_confdir_with_prefix#"${EPREFIX}"}"
 	local hint_db="${D}/$(ghc-confdir)"
 	local hint_file="${hint_db}/gentoo-empty-${CATEGORY}-${PF}.conf"
 	mkdir -p "${hint_db}" || die

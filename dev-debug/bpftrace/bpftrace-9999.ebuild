@@ -1,13 +1,13 @@
-# Copyright 2019-2025 Gentoo Authors
+# Copyright 2019-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
-LLVM_COMPAT=( {17..21} )
-RUST_MIN_VER="1.85.1"
+LLVM_COMPAT=( {18..22} )
+RUST_MIN_VER="1.85.0"
 RUST_OPTIONAL=1
 
-inherit cmake flag-o-matic linux-info llvm-r1 rust
+inherit cmake flag-o-matic linux-info llvm-r2 rust
 
 DESCRIPTION="High-level tracing language for eBPF"
 HOMEPAGE="https://github.com/bpftrace/bpftrace"
@@ -18,15 +18,15 @@ if [[ ${PV} == *9999* ]] ; then
 	EGIT_BRANCH="master"
 	inherit git-r3
 	# use a released man page for git
-	MAN_V="0.24.2"
+	MAN_V="0.25.0"
 else
-	SRC_URI="https://github.com/bpftrace/${PN}/archive/v${MY_PV}.tar.gz -> ${P}.tar.gz"
+	SRC_URI="https://github.com/bpftrace/bpftrace/archive/v${MY_PV}.tar.gz -> ${P}.tar.gz"
 	KEYWORDS="~amd64 ~arm64"
 	# the man page version may trail the release
-	#MAN_V="0.24.2"
+	#MAN_V="0.25.0"
 fi
 
-SRC_URI+=" https://github.com/bpftrace/${PN}/releases/download/v${MAN_V:-${PV}}/man.tar.xz -> ${PN}-${MAN_V:-${PV}}-man.tar.xz"
+SRC_URI+=" https://github.com/bpftrace/bpftrace/releases/download/v${MAN_V:-${PV}}/man.tar.xz -> bpftrace-${MAN_V:-${PV}}-man.tar.xz"
 
 S="${WORKDIR}/${PN}-${MY_PV:-${PV}}"
 
@@ -72,8 +72,8 @@ BDEPEND="
 "
 
 PATCHES=(
-	"${FILESDIR}/bpftrace-0.11.4-old-kernels.patch"
-	"${FILESDIR}/bpftrace-0.21.0-dont-compress-man.patch"
+	"${FILESDIR}/0.11.4-old-kernels.patch"
+	"${FILESDIR}/0.21.0-dont-compress-man.patch"
 )
 
 pkg_pretend() {
@@ -88,6 +88,12 @@ pkg_pretend() {
 		~HAVE_EBPF_JIT
 	"
 
+	if use test; then
+		# force linux-info to check kernel configurations only in the
+		# running kernel, not in any on-disk configuration (bug 977516)
+		KERNEL_DIR="linux-info-runtime-checks-only"
+	fi
+
 	check_extra_config
 
 	if use test; then
@@ -100,7 +106,7 @@ pkg_pretend() {
 }
 
 pkg_setup() {
-	llvm-r1_pkg_setup
+	llvm-r2_pkg_setup
 	use test && rust_pkg_setup
 }
 

@@ -4,7 +4,7 @@
 EAPI=8
 
 DISTUTILS_USE_PEP517=flit
-PYTHON_COMPAT=( python3_{11..14} pypy3_11 )
+PYTHON_COMPAT=( python3_{12..15} )
 PYTHON_REQ_USE='threads(+),ssl(+)'
 
 inherit distutils-r1 pypi
@@ -17,7 +17,7 @@ HOMEPAGE="
 
 LICENSE="GPL-2+"
 SLOT="0"
-KEYWORDS="~alpha ~amd64 ~arm ~arm64 ~hppa ~loong ~m68k ~mips ~ppc ~ppc64 ~riscv ~s390 ~sparc ~x86"
+KEYWORDS="~alpha amd64 arm arm64 ~hppa ~loong ~m68k ~mips ppc ppc64 ~riscv ~s390 ~sparc x86"
 IUSE="+gpg pretty-log tools"
 
 RDEPEND="
@@ -29,6 +29,8 @@ RDEPEND="
 		dev-python/rich[${PYTHON_USEDEP}]
 	)
 "
+# gpg for tests: trust-moel direct
+# https://gitlab.com/sequoia-pgp/sequoia-chameleon-gnupg/-/work_items/152
 BDEPEND="
 	test? (
 		app-alternatives/gpg[ssl]
