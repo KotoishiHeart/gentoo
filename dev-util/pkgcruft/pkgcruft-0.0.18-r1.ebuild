@@ -1,12 +1,12 @@
-# Copyright 2023-2025 Gentoo Authors
+# Copyright 2023-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
 
-LLVM_COMPAT=( {19..21} )
+LLVM_COMPAT=( {19..22} )
 RUST_MIN_VER="1.90.0"
 
-inherit cargo edo multiprocessing llvm-r2 shell-completion
+inherit cargo edo llvm-r2 multiprocessing shell-completion
 
 DESCRIPTION="QA library and tools based on pkgcraft"
 HOMEPAGE="https://pkgcraft.github.io/"
@@ -24,7 +24,7 @@ else
 	# sed -rn "/^PACKAGE_VERSION=/ s/^.*='(.*)'/\1/p" **/scallop/bash/configure
 	SCALLOP_VERSION="5.3.9.20251212"
 	SRC_URI="https://github.com/pkgcraft/pkgcraft/releases/download/${P}/${P}.tar.xz"
-	KEYWORDS="~amd64"
+	KEYWORDS="amd64 arm64"
 fi
 
 LICENSE="MIT"

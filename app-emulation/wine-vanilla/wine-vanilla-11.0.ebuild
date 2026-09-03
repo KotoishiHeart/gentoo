@@ -15,7 +15,7 @@ else
 	(( $(ver_cut 2) )) && WINE_SDIR=$(ver_cut 1).x || WINE_SDIR=$(ver_cut 1).0
 	SRC_URI="https://dl.winehq.org/wine/source/${WINE_SDIR}/wine-${PV}.tar.xz"
 	S=${WORKDIR}/wine-${PV}
-	KEYWORDS="-* ~amd64 ~arm64 ~x86"
+	KEYWORDS="-* amd64 ~arm64 x86"
 fi
 
 DESCRIPTION="Free implementation of Windows(tm) on Unix, without external patchsets"
@@ -31,11 +31,10 @@ LICENSE="
 "
 SLOT="${PV}"
 IUSE="
-	+X +alsa bluetooth capi cups +dbus dos llvm-libunwind ffmpeg
-	+fontconfig +gecko gphoto2 +gstreamer kerberos +mono netapi
-	nls odbc opencl +opengl pcap perl pulseaudio samba scanner
-	+sdl selinux smartcard +ssl +truetype udev +unwind usb v4l
-	+vulkan wayland xinerama
+	+X +alsa bluetooth cups +dbus dos llvm-libunwind ffmpeg +fontconfig
+	+gecko gphoto2 +gstreamer kerberos +mono netapi nls odbc opencl
+	+opengl pcap perl pulseaudio samba scanner +sdl selinux smartcard
+	+ssl +truetype udev +unwind usb v4l +vulkan wayland xinerama
 "
 REQUIRED_USE="
 	X? ( truetype )
@@ -79,7 +78,6 @@ WINE_COMMON_DEPEND="
 		x11-libs/libXext[${WINE_USEDEP}]
 	)
 	alsa? ( media-libs/alsa-lib[${WINE_USEDEP}] )
-	capi? ( net-libs/libcapi:=[${WINE_USEDEP}] )
 	ffmpeg? ( media-video/ffmpeg:=[${WINE_USEDEP}] )
 	gphoto2? ( media-libs/libgphoto2:=[${WINE_USEDEP}] )
 	gstreamer? (
@@ -127,9 +125,10 @@ RDEPEND="
 "
 DEPEND="
 	${WINE_COMMON_DEPEND}
-	sys-kernel/linux-headers
+	>=sys-kernel/linux-headers-6.14
 	X? ( x11-base/xorg-proto )
 	bluetooth? ( net-wireless/bluez )
+	opencl? ( dev-util/opencl-headers )
 "
 BDEPEND="
 	sys-devel/bison
@@ -161,7 +160,7 @@ src_configure() {
 
 		$(use_with X x)
 		$(use_with alsa)
-		$(use_with capi)
+		--without-capi #977907
 		$(use_with cups)
 		$(use_with dbus)
 		$(use_with ffmpeg)

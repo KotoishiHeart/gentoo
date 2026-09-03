@@ -23,9 +23,9 @@ S="${WORKDIR}/${MY_P}"
 
 LICENSE="Apache-2.0 SSPL-1"
 SLOT="0"
-KEYWORDS="~amd64 ~arm64 -riscv"
+KEYWORDS="amd64 ~arm64 -riscv"
 CPU_FLAGS="cpu_flags_x86_avx"
-IUSE="debug kerberos mongosh ssl +tools ${CPU_FLAGS}"
+IUSE="debug kerberos mongosh selinux ssl +tools ${CPU_FLAGS}"
 
 # https://github.com/mongodb/mongo/wiki/Test-The-Mongodb-Server
 # resmoke needs python packages not yet present in Gentoo
@@ -63,6 +63,7 @@ PDEPEND="
 	mongosh? ( app-admin/mongosh-bin )
 	tools? ( >=app-admin/mongo-tools-100 )
 "
+RDEPEND+=" selinux? ( sec-policy/selinux-mongodb )"
 
 PATCHES=(
 	"${WORKDIR}/mongodb-6.0.22-patches/mongodb-4.4.29-no-enterprise.patch"
@@ -74,6 +75,7 @@ PATCHES=(
 	"${WORKDIR}/mongodb-6.0.22-patches/mongodb-6.0.7-gcc-13.patch"
 	"${WORKDIR}/mongodb-6.0.22-patches/mongodb-6.0.21-boost-1.85.patch"
 	"${WORKDIR}/mongodb-6.0.22-patches/mongodb-6.0.2-sconstruct-changes.patch"
+	"${FILESDIR}/mongodb-5.0.32-boost-system.patch"
 )
 
 python_check_deps() {

@@ -13,7 +13,7 @@ SRC_URI="
 
 LICENSE="GPL-2+"
 SLOT="0"
-KEYWORDS="~amd64 ~arm64 ~ppc64 ~riscv ~x86 ~x64-macos"
+KEYWORDS="amd64 arm64 ppc64 ~riscv x86 ~x64-macos"
 IUSE="test"
 RESTRICT="!test? ( test )"
 
@@ -22,6 +22,7 @@ RDEPEND="
 	net-misc/wget[ssl]
 	virtual/editor
 "
+# gpg: https://gitlab.com/sequoia-pgp/sequoia-chameleon-gnupg/-/issues/155
 BDEPEND="
 	test? (
 		${RDEPEND}

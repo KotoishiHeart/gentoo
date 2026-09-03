@@ -1,4 +1,4 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -10,9 +10,10 @@ EAPI=8
 # app-emulation/libvirt
 # Please bump them together!
 
-PYTHON_COMPAT=( python3_{10..14} )
+PYTHON_COMPAT=( python3_{11..14} )
 VERIFY_SIG_OPENPGP_KEY_PATH=/usr/share/openpgp-keys/libvirt.org.asc
-inherit meson linux-info python-any-r1 readme.gentoo-r1 tmpfiles verify-sig
+inherit meson flag-o-matic linux-info python-any-r1 readme.gentoo-r1
+inherit tmpfiles verify-sig
 
 if [[ ${PV} = *9999* ]]; then
 	inherit git-r3
@@ -53,7 +54,7 @@ BDEPEND="
 	dev-python/docutils
 	virtual/pkgconfig
 	bash-completion? ( >=app-shells/bash-completion-2.0 )
-	verify-sig? ( sec-keys/openpgp-keys-libvirt )"
+	verify-sig? ( >=sec-keys/openpgp-keys-libvirt-20260831 )"
 
 # gettext.sh command is used by the libvirt command wrappers, and it's
 # non-optional, so put it into RDEPEND.
@@ -156,8 +157,8 @@ PDEPEND="
 
 PATCHES=(
 	"${FILESDIR}"/${PN}-11.0.0-Fix-paths-in-libvirt-guests.sh.in.patch
-	"${FILESDIR}"/${PN}-11.3.0-do-not-use-sysconfig.patch
 	"${FILESDIR}"/${PN}-11.3.0-fix-paths-for-apparmor.patch
+	"${FILESDIR}"/${PN}-12.2.0-do-not-use-sysconfig.patch
 )
 
 python_check_deps() {
@@ -258,6 +259,9 @@ src_prepare() {
 }
 
 src_configure() {
+	# Breaks with always_inline
+	filter-flags -fno-semantic-interposition
+
 	local emesonargs=(
 		$(meson_feature apparmor)
 		$(meson_feature apparmor apparmor_profiles)

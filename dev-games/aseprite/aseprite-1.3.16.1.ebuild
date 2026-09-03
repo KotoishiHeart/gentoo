@@ -23,7 +23,7 @@ SRC_URI="https://github.com/aseprite/aseprite/releases/download/v$(ver_cut 1-3 $
 # See https://github.com/aseprite/aseprite#license
 LICENSE="Aseprite-EULA BSD MIT"
 SLOT="0"
-KEYWORDS="~amd64 ~x86"
+KEYWORDS="amd64 ~x86"
 
 IUSE="test webp"
 
@@ -103,8 +103,7 @@ src_prepare() {
 		-e 's:add_subdirectory(TinyEXIF):add_subdirectory(TinyEXIF EXCLUDE_FROM_ALL):g' \
 			third_party/CMakeLists.txt || die
 	# Aseprite: don't use bundled gtest
-	sed -i -e '/add_subdirectory(googletest)/d' \
-		laf/third_party/CMakeLists.txt || die
+	cmake_comment_add_subdirectory -f laf/third_party googletest
 	# Fix shebang in thumbnailer
 	sed -i -e 's:#!/usr/bin/sh:#!/bin/sh:' \
 		src/desktop/linux/aseprite-thumbnailer || die
@@ -126,6 +125,7 @@ src_configure() {
 	#
 	# There are a lot of issues, so don't trust any fixes without thorough
 	# testing.
+	append-flags -fno-strict-aliasing
 	filter-lto
 
 	einfo "Skia configuration"

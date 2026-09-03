@@ -3,7 +3,7 @@
 
 EAPI=8
 
-inherit go-module toolchain-funcs shell-completion
+inherit go-env go-module shell-completion sysroot
 
 DESCRIPTION="CLI to run commands against Kubernetes clusters"
 HOMEPAGE="https://kubernetes.io"
@@ -14,35 +14,34 @@ LICENSE="Apache-2.0"
 # Dependent licenses
 LICENSE+=" Apache-2.0 BSD BSD-2 ISC MIT"
 SLOT="0"
-KEYWORDS="~amd64 ~arm64"
-IUSE="hardened"
+KEYWORDS="amd64 ~arm64"
+IUSE="selinux"
 RESTRICT="test"
 
 BDEPEND=">=dev-lang/go-1.25.4"
+RDEPEND="selinux? ( sec-policy/selinux-kubernetes )"
 
 QA_PRESTRIPPED=usr/bin/kubectl
 
 src_compile() {
-	CGO_LDFLAGS="$(usex hardened '-fno-PIC ' '')" \
-		emake -j1 GOFLAGS="${GOFLAGS}" GOLDFLAGS="" LDFLAGS="" FORCE_HOST_GO=yes \
+	local GOOS=$(go-env_goos)
+
+	emake -j1 GOFLAGS="${GOFLAGS}" GOLDFLAGS="" LDFLAGS="" FORCE_HOST_GO=yes \
+		KUBE_BUILD_PLATFORMS="${GOOS}/${GOARCH}" KUBE_${GOOS@U}_${GOARCH@U}_CC="${CC}" \
 		WHAT=cmd/${PN}
 
-	if ! tc-is-cross-compiler; then
-		einfo "generating shell completion files"
-		_output/bin/${PN} completion bash > ${PN}.bash || die
-		_output/bin/${PN} completion zsh > ${PN}.zsh || die
-		_output/bin/${PN} completion fish > ${PN}.fish || die
-	fi
+	bin=_output/local/bin/${GOOS}/${GOARCH}/${PN}
+
+	einfo "generating shell completion files"
+	sysroot_try_run_prefixed ${bin} completion bash > ${PN}.bash || die
+	sysroot_try_run_prefixed ${bin} completion zsh > ${PN}.zsh || die
+	sysroot_try_run_prefixed ${bin} completion fish > ${PN}.fish || die
 }
 
 src_install() {
-	dobin _output/bin/${PN}
+	dobin ${bin}
 
-	if ! tc-is-cross-compiler; then
-		newbashcomp ${PN}.bash ${PN}
-		newzshcomp ${PN}.zsh _${PN}
-		dofishcomp ${PN}.fish
-	else
-		ewarn "Shell completion files not installed! Install them manually with '${PN} completion --help'"
-	fi
+	[[ -s ${PN}.bash ]] && newbashcomp ${PN}.bash ${PN}
+	[[ -s ${PN}.zsh ]] && newzshcomp ${PN}.zsh _${PN}
+	[[ -s ${PN}.fish ]] && dofishcomp ${PN}.fish
 }

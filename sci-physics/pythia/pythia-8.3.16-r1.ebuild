@@ -1,4 +1,4 @@
-# Copyright 1999-2025 Gentoo Authors
+# Copyright 1999-2026 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 EAPI=8
@@ -134,7 +134,6 @@ src_configure() {
 		$(use_with python) \
 		$(use_with rivet) \
 		$(use_with mpich) \
-		$(use_with hepmc2) \
 		$(usex lhapdf "--with-lhapdf6
 			--with-lhapdf6-plugin=LHAPDF6.h
 			--with-lhapdf6-lib=${EPREFIX}/usr/$(get_libdir)" "") \
@@ -202,7 +201,7 @@ src_install() {
 	fi
 	if use python; then
 		local site_dir=$(python_get_sitedir)
-		insinto "${site_dir#${EPREFIX}}"
+		insinto "${site_dir#"${EPREFIX}"}"
 		doins lib/pythia8.so
 	fi
 
